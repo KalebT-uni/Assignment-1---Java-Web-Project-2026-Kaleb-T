@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -16,16 +18,19 @@ import com.example.demo.model.GlobalStatsResponse;
 import com.example.demo.model.ShutdownResponse;
 import com.example.demo.model.UptimeResponse;
 import com.example.demo.service.ServerStatsService;
+import com.example.demo.service.TranscriptionService;
 
 @RestController
 public class AdminController {
 
     private final ServerStatsService statsService;
     private final ApplicationContext applicationContext;
+    private final TranscriptionService transcriptionService;
 
-    public AdminController(ServerStatsService statsService, ApplicationContext applicationContext) {
+    public AdminController(ServerStatsService statsService, ApplicationContext applicationContext, TranscriptionService transcriptionService) {
         this.statsService = statsService;
         this.applicationContext = applicationContext;
+        this.transcriptionService = transcriptionService;
     }
 
     @GetMapping("/api/v1/admin/uptime")
@@ -58,5 +63,11 @@ public class AdminController {
 
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(new ShutdownResponse("Graceful shutdown requested."));
+    }
+
+    @GetMapping("/api/v1/test-transcribe")
+    public String testTranscribe() throws Exception {
+        byte[] audioBytes = Files.readAllBytes(Paths.get("C:/Users/kaleb/OneDrive/Documents/Sound Recordings/test1.m4a"));
+        return transcriptionService.transcribe(audioBytes, "test1.m4a");
     }
 }
