@@ -1,13 +1,20 @@
 package com.example.demo.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.net.InetSocketAddress;
+import java.time.Duration;
+
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.demo.config.OpenAiConfig;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.transport.ProxyProvider;
 
 @Service
 public class TranscriptionService {
@@ -19,7 +26,24 @@ public class TranscriptionService {
     public TranscriptionService(OpenAiConfig config, ServerStatsService statsService) {
         this.config = config;
         this.statsService = statsService;
-        this.webClient = WebClient.builder().build();
+
+        HttpClient httpClient = HttpClient.create()
+                .responseTimeout(Duration.ofSeconds(20));
+
+        String proxyHost = System.getProperty("https.proxyHost");
+        String proxyPortStr = System.getProperty("https.proxyPort");
+
+        if (proxyHost != null && !proxyHost.isBlank() && proxyPortStr != null) {
+            int proxyPort = Integer.parseInt(proxyPortStr);
+            httpClient = httpClient.proxy(proxySpec ->
+            proxySpec.type(ProxyProvider.Proxy.HTTP)
+                     .address(() -> new InetSocketAddress(proxyHost, proxyPort))
+            );
+        }
+
+        this.webClient = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
     }
 
     public String transcribe(byte[] audioBytes, String filename) {
