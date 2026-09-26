@@ -6,6 +6,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Service;
 
+/**
+ * Holds server-wide state shared across all concurrent requests: the
+ * server's start time, cumulative token usage, and whether a shutdown is
+ * in progress. As a Spring singleton bean, every request thread shares
+ * this one instance, so all mutable state uses atomic types to remain
+ * safe under concurrent access.
+ */
 @Service
 public class ServerStatsService {
 
@@ -33,7 +40,12 @@ public class ServerStatsService {
     public long getOutputTokens() {
         return outputTokens.get();
     }
-
+    
+    /**
+     * Atomically marks shutdown as started, returning true only for the
+     * first caller. Prevents two concurrent shutdown requests from both
+     * being accepted.
+     */
     public boolean tryBeginShutdown() {
         return shuttingDown.compareAndSet(false, true);
     }

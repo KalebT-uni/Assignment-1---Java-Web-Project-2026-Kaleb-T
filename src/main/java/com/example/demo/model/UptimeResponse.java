@@ -2,6 +2,7 @@ package com.example.demo.model;
 
 import java.time.Instant;
 
+/** Response body for GET /api/v1/admin/uptime. */
 public class UptimeResponse {
 
     private Instant utcServerStart;

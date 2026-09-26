@@ -8,6 +8,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.model.TranscriptionResultResponse;
 import com.example.demo.service.TranscriptionService;
 
+/**
+ * Receives recorded audio uploaded from the browser's front end and
+ * returns its transcribed text. The uploaded file is expected as a
+ * multipart form field named "audio", matching the front end's
+ * MediaRecorder/fetch implementation.
+ */
 @RestController
 public class TranscriptionController {
 

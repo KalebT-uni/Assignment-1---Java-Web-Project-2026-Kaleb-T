@@ -2,6 +2,7 @@ package com.example.demo.model;
 
 import java.time.Instant;
 
+/** Standard error response shape used across the admin API. */
 public class ErrorResponse {
 
     private Instant timestamp;

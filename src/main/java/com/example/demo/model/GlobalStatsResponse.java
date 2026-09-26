@@ -1,5 +1,6 @@
 package com.example.demo.model;
 
+/** Response body for GET /api/v1/global/stats. */
 public class GlobalStatsResponse {
 
     private long inputTokens;
