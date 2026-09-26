@@ -40,7 +40,7 @@ public class ServerStatsService {
     public long getOutputTokens() {
         return outputTokens.get();
     }
-    
+
     /**
      * Atomically marks shutdown as started, returning true only for the
      * first caller. Prevents two concurrent shutdown requests from both
