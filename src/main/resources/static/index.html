@@ -2,37 +2,7 @@
 <html>
 <head>
     <title>Speech to Text</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 60px;
-        }
-        #recordButton {
-            padding: 20px 40px;
-            font-size: 18px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-        }
-        #recordButton.recording {
-            background-color: #f44336;
-        }
-        #status {
-            margin-top: 20px;
-            font-size: 16px;
-            color: #555;
-        }
-        #transcript {
-            margin-top: 30px;
-            font-size: 20px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1>Speech to Text</h1>
@@ -40,63 +10,6 @@
     <p id="status"></p>
     <p id="transcript"></p>
 
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        const recordButton = document.getElementById('recordButton');
-        const statusText = document.getElementById('status');
-        const transcriptText = document.getElementById('transcript');
-
-        recordButton.addEventListener('click', async () => {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                return;
-            }
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                statusText.textContent = 'Transcribing...';
-                recordButton.textContent = 'Start Recording';
-                recordButton.classList.remove('recording');
-
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'recording.webm');
-
-                try {
-                    const response = await fetch('/api/v1/transcribe', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Transcription failed');
-                    }
-
-                    const data = await response.json();
-                    transcriptText.textContent = data.text;
-                    statusText.textContent = '';
-                } catch (error) {
-                    statusText.textContent = 'Error: could not transcribe audio.';
-                    console.error(error);
-                }
-
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start();
-            recordButton.textContent = 'Stop Recording';
-            recordButton.classList.add('recording');
-            statusText.textContent = 'Recording...';
-            transcriptText.textContent = '';
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

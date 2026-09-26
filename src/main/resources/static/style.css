@@ -1,0 +1,42 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin-top: 60px;
+}
+
+#recordButton {
+    padding: 20px 40px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+}
+
+#recordButton:disabled {
+    background-color: #999;
+    cursor: not-allowed;
+}
+
+#recordButton.recording {
+    background-color: #f44336;
+}
+
+#status {
+    margin-top: 20px;
+    font-size: 16px;
+    color: #555;
+}
+
+#status.error {
+    color: #c62828;
+}
+
+#transcript {
+    margin-top: 30px;
+    font-size: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
