@@ -58,6 +58,7 @@ async function startRecording() {
 
             const data = await response.json();
             transcriptText.textContent = data.text;
+            transcriptText.classList.add('visible');
             setStatus('', false);
         } catch (error) {
             setStatus('Could not transcribe audio: ' + error.message, true);
@@ -73,6 +74,7 @@ async function startRecording() {
     recordButton.classList.add('recording');
     setStatus('Recording...', false);
     transcriptText.textContent = '';
+    transcriptText.classList.remove('visible');
 }
 
 recordButton.addEventListener('click', async () => {
