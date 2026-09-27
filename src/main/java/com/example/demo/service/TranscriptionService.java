@@ -2,7 +2,10 @@ package com.example.demo.service;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.time.Instant;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -16,7 +19,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.transport.ProxyProvider;
 
-
 /**
  * Sends recorded audio to a Cloud speech-to-text endpoint (OpenAI's
  * gpt-4o-mini-transcribe API in production, or a local whisper.cpp-backed
@@ -27,6 +29,8 @@ import reactor.netty.transport.ProxyProvider;
 @Service
 public class TranscriptionService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TranscriptionService.class);
+
     private final WebClient webClient;
     private final OpenAiConfig config;
     private final ServerStatsService statsService;
@@ -36,22 +40,16 @@ public class TranscriptionService {
         this.statsService = statsService;
 
         HttpClient httpClient = HttpClient.create()
-                // Guards against a stalled request blocking indefinitely,
-                // which would otherwise also block graceful shutdown.
                 .responseTimeout(Duration.ofSeconds(20));
-        
-        // TITAN's network requires outbound traffic to go through a proxy,
-        // injected as standard JVM system properties. Reactor Netty does
-        // not honour these automatically, so they're applied explicitly
-        // here. Locally, these properties are unset and this is skipped.
+
         String proxyHost = System.getProperty("https.proxyHost");
         String proxyPortStr = System.getProperty("https.proxyPort");
 
         if (proxyHost != null && !proxyHost.isBlank() && proxyPortStr != null) {
             int proxyPort = Integer.parseInt(proxyPortStr);
             httpClient = httpClient.proxy(proxySpec ->
-            proxySpec.type(ProxyProvider.Proxy.HTTP)
-                     .address(() -> new InetSocketAddress(proxyHost, proxyPort))
+                    proxySpec.type(ProxyProvider.Proxy.HTTP)
+                             .address(() -> new InetSocketAddress(proxyHost, proxyPort))
             );
         }
 
@@ -59,15 +57,11 @@ public class TranscriptionService {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
-    
-    /**
-     * Uploads the given audio bytes to the configured transcription
-     * endpoint and returns the resulting text.
-     *
-     * @param audioBytes raw audio data, as recorded by the browser
-     * @param filename   original filename, forwarded for the multipart request
-     */
+
     public String transcribe(byte[] audioBytes, String filename) {
+        logger.info("Transcription request received: {} bytes, filename={}", audioBytes.length, filename);
+        Instant start = Instant.now();
+
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new ByteArrayResource(audioBytes) {
             @Override
@@ -77,26 +71,38 @@ public class TranscriptionService {
         });
         builder.part("model", "gpt-4o-mini-transcribe");
 
-        TranscriptionResponse response = webClient.post()
-                .uri(config.getApiUrl())
-                .header("Authorization", "Bearer " + config.getApiKey())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .bodyValue(builder.build())
-                .retrieve()
-                .bodyToMono(TranscriptionResponse.class)
-                .block();
+        try {
+            TranscriptionResponse response = webClient.post()
+                    .uri(config.getApiUrl())
+                    .header("Authorization", "Bearer " + config.getApiKey())
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .bodyValue(builder.build())
+                    .retrieve()
+                    .bodyToMono(TranscriptionResponse.class)
+                    .block();
 
-        if (response != null && response.usage() != null) {
-            statsService.addInputTokens(response.usage().inputTokens());
-            statsService.addOutputTokens(response.usage().outputTokens());
+            long elapsedMs = Duration.between(start, Instant.now()).toMillis();
+
+            if (response != null && response.usage() != null) {
+                statsService.addInputTokens(response.usage().inputTokens());
+                statsService.addOutputTokens(response.usage().outputTokens());
+                logger.info("Transcription completed in {}ms, inputTokens={}, outputTokens={}",
+                        elapsedMs, response.usage().inputTokens(), response.usage().outputTokens());
+            } else {
+                logger.info("Transcription completed in {}ms, no usage data returned", elapsedMs);
+            }
+
+            return response != null ? response.text() : "";
+        } catch (Exception e) {
+            logger.error("Transcription request failed after {}ms: {}",
+                    Duration.between(start, Instant.now()).toMillis(), e.getMessage());
+            throw e;
         }
-
-        return response != null ? response.text() : "";
     }
-    
+
     /** Shape of the JSON response returned by the transcription endpoint. */
     private record TranscriptionResponse(String text, Usage usage) {}
-    
+
     /**
      * Token usage counts from a single transcription call. Field names use
      * the snake_case JSON keys the API returns (input_tokens/output_tokens).
