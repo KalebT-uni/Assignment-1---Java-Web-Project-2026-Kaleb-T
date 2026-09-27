@@ -45,3 +45,12 @@ See the assignment's YAML specification for the full contract of
 `/api/v1/admin/uptime`, `/api/v1/admin/shutdown`, and
 `/api/v1/global/stats`. The transcription endpoint is
 `POST /api/v1/transcribe`, accepting a multipart form with an `audio` field.
+
+
+## Testing
+
+`TranscriptionControllerTest` provides regression tests for the
+transcription endpoint using a mocked `TranscriptionService`, covering
+both a successful transcription and the structured error response
+returned when the STT service fails — without needing a real network
+call or Cloud STT service.
